@@ -336,14 +336,20 @@
                         const data = await res.json();
 
                         if (res.ok) {
-                            item.status = 'success';
-                            item.progress = 100;
                             // The API returns an array of objects with 'src'
                             if (Array.isArray(data) && data.length > 0) {
                                 item.result = data[0].src;
                                 // Update preview to show uploaded image
                                 const uploadedUrl = data[0].src.startsWith('http') ? data[0].src : window.location.origin + data[0].src;
+
+                                // Revoke the old blob URL to free memory
+                                if (item.preview && item.preview.startsWith('blob:')) {
+                                    URL.revokeObjectURL(item.preview);
+                                }
+
                                 item.preview = uploadedUrl;
+                                item.progress = 100;
+                                item.status = 'success';
                             } else {
                                 throw new Error('Invalid response format');
                             }
