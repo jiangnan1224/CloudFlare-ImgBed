@@ -337,9 +337,13 @@
 
                         if (res.ok) {
                             item.status = 'success';
+                            item.progress = 100;
                             // The API returns an array of objects with 'src'
                             if (Array.isArray(data) && data.length > 0) {
                                 item.result = data[0].src;
+                                // Update preview to show uploaded image
+                                const uploadedUrl = data[0].src.startsWith('http') ? data[0].src : window.location.origin + data[0].src;
+                                item.preview = uploadedUrl;
                             } else {
                                 throw new Error('Invalid response format');
                             }
