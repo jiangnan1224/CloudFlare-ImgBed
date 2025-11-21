@@ -1253,15 +1253,24 @@
 
                 // Check login on mount
                 onMounted(() => {
-                    const savedAuth = localStorage.getItem('authCode');
-                    if (savedAuth) {
-                        authCode.value = savedAuth;
-                        handleLogin();
+                    const savedCredentials = localStorage.getItem('adminCredentials');
+                    if (savedCredentials) {
+                        // Decode credentials to get username and password
+                        try {
+                            const decoded = atob(savedCredentials);
+                            const [username, password] = decoded.split(':');
+                            adminUsername.value = username;
+                            adminPassword.value = password;
+                            handleLogin();
+                        } catch (e) {
+                            console.error('Failed to decode credentials:', e);
+                            localStorage.removeItem('adminCredentials');
+                        }
                     }
                 });
 
                 return {
-                    isLoggedIn, authCode, loading, error, handleLogin, logout,
+                    isLoggedIn, adminUsername, adminPassword, loading, error, handleLogin, logout,
                     currentView, currentViewLabel, menuItems, handleMenuClick, handleSubMenuClick, getSettingsLabel,
                     images, directories, currentDir, searchQuery, loadingImages, fetchImages,
                     viewMode, getImageUrl, handleImageError, formatDate, formatSize,
