@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudFlare ImgBed Admin</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        dark: '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 text-gray-900 antialiased">
+    <div id="app" class="h-screen flex flex-col">
+        <!-- Login View -->
+        <div v-if="!isLoggedIn" class="flex-1 flex items-center justify-center p-4">
+            <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+                <div class="text-center mb-8">
+                    <div
+                        class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 mb-4">
+                        <i class="ph ph-lock-key text-3xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900">Admin Login</h1>
+                    <p class="text-gray-500 mt-2">Enter your authentication code to continue</p>
+                </div>
+                <form @submit.prevent="handleLogin" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Auth Code</label>
+                        <div class="relative">
+                            <input type="password" v-model="authCode"
+                                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none pl-10"
+                                placeholder="Enter code..." required>
+                            <i class="ph ph-key absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        </div>
+                    </div>
+                    <button type="submit" :disabled="loading"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                        <i v-if="loading" class="ph ph-spinner animate-spin text-xl"></i>
+                        <span v-else>Sign In</span>
+                    </button>
+                    <p v-if="error" class="text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg">{{ error }}</p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div v-else class="flex h-screen overflow-hidden">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10">
+                <div class="p-6 border-b border-gray-100 flex items-center gap-3">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                        <i class="ph ph-cloud-arrow-up text-xl"></i>
+                    </div>
+                    <span class="font-bold text-lg tracking-tight text-gray-800">ImgBed Admin</span>
+                </div>
+
+                <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                    <a v-for="item in menuItems" :key="item.id" @click="currentView = item.id"
+                        class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer group"
+                        :class="currentView === item.id ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'">
+                        <i
+                            :class="['ph text-xl', item.icon, currentView === item.id ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600']"></i>
+                        {{ item.label }}
+                    </a>
+                </nav>
+
+                <div class="p-4 border-t border-gray-100">
+                    <button @click="logout"
+                        class="flex items-center gap-3 px-4 py-3 w-full text-left text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                        <i class="ph ph-sign-out text-xl"></i>
+                        Sign Out
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Content Area -->
+            <main class="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
+                <!-- Header -->
+                <header
+                    class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm z-10">
+                    <h2 class="text-xl font-semibold text-gray-800">{{ currentViewLabel }}</h2>
+                    <div class="flex items-center gap-4">
+                        <div class="text-sm text-gray-500">
+                            v2.0.0
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Views -->
+                <div class="flex-1 overflow-auto p-8">
+
+                    <!-- Image Manager View -->
+                    <div v-if="currentView === 'images'" class="space-y-6">
+                        <!-- Toolbar -->
+                        <div
+                            class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+                            <div class="flex items-center gap-4 flex-1 min-w-[200px]">
+                                <div class="relative flex-1 max-w-md">
+                                    <input v-model="searchQuery" @keyup.enter="fetchImages(true)" type="text"
+                                        placeholder="Search files..."
+                                        class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all">
+                                    <i
+                                        class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                </div>
+                                <select v-model="currentDir" @change="fetchImages(true)"
+                                    class="px-4 py-2 rounded-lg border border-gray-200 bg-white focus:border-blue-500 outline-none cursor-pointer">
+                                    <option value="/">Root /</option>
+                                    <option v-for="dir in directories" :key="dir" :value="dir">{{ dir }}</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="fetchImages(true)"
+                                    class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg" title="Refresh">
+                                    <i class="ph ph-arrows-clockwise text-xl"></i>
+                                </button>
+                                <div class="h-6 w-px bg-gray-200 mx-1"></div>
+                                <button @click="viewMode = 'grid'" class="p-2 rounded-lg transition-colors"
+                                    :class="viewMode === 'grid' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'">
+                                    <i class="ph ph-squares-four text-xl"></i>
+                                </button>
+                                <button @click="viewMode = 'list'" class="p-2 rounded-lg transition-colors"
+                                    :class="viewMode === 'list' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'">
+                                    <i class="ph ph-list-dashes text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div v-if="loadingImages" class="flex flex-col items-center justify-center py-20 text-gray-400">
+                            <i class="ph ph-spinner animate-spin text-4xl mb-4"></i>
+                            <p>Loading images...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div v-else-if="images.length === 0"
+                            class="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-xl border border-gray-200 border-dashed">
+                            <i class="ph ph-image text-6xl mb-4 text-gray-300"></i>
+                            <p class="text-lg font-medium text-gray-500">No images found</p>
+                            <p class="text-sm">Try uploading some files or change the directory.</p>
+                        </div>
+
+                        <!-- Grid View -->
+                        <div v-else-if="viewMode === 'grid'"
+                            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                            <div v-for="img in images" :key="img.name"
+                                class="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 relative">
+                                <!-- Image Preview -->
+                                <div class="aspect-square bg-gray-100 relative overflow-hidden">
+                                    <img :src="getImageUrl(img.name)" loading="lazy"
+                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        @error="handleImageError">
+                                    <!-- Overlay Actions -->
+                                    <div
+                                        class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
+                                        <button @click="copyLink(img.name)"
+                                            class="p-2 bg-white/90 rounded-lg hover:bg-white text-gray-800 shadow-sm"
+                                            title="Copy Link">
+                                            <i class="ph ph-link text-lg"></i>
+                                        </button>
+                                        <button @click="deleteImage(img)"
+                                            class="p-2 bg-white/90 rounded-lg hover:bg-red-50 text-red-600 shadow-sm"
+                                            title="Delete">
+                                            <i class="ph ph-trash text-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Info -->
+                                <div class="p-3">
+                                    <p class="text-sm font-medium text-gray-800 truncate" :title="img.name">{{
+                                        img.name.split('/').pop() }}</p>
+                                    <div class="flex items-center justify-between mt-2 text-xs text-gray-500">
+                                        <span>{{ formatDate(img.metadata?.TimeStamp) }}</span>
+                                        <span class="bg-gray-100 px-2 py-0.5 rounded text-gray-600">{{
+                                            img.metadata?.Size ? formatSize(img.metadata.Size) : 'Unknown' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- List View -->
+                        <div v-else class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500">
+                                    <tr>
+                                        <th class="px-6 py-3 font-medium">Preview</th>
+                                        <th class="px-6 py-3 font-medium">Name</th>
+                                        <th class="px-6 py-3 font-medium">Size</th>
+                                        <th class="px-6 py-3 font-medium">Date</th>
+                                        <th class="px-6 py-3 font-medium text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr v-for="img in images" :key="img.name"
+                                        class="hover:bg-gray-50 transition-colors group">
+                                        <td class="px-6 py-3 w-20">
+                                            <div
+                                                class="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
+                                                <img :src="getImageUrl(img.name)" class="w-full h-full object-cover">
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-3 font-medium text-gray-900">{{ img.name }}</td>
+                                        <td class="px-6 py-3 text-gray-500">{{ img.metadata?.Size ?
+                                            formatSize(img.metadata.Size) : '-' }}</td>
+                                        <td class="px-6 py-3 text-gray-500">{{ formatDate(img.metadata?.TimeStamp) }}
+                                        </td>
+                                        <td class="px-6 py-3 text-right">
+                                            <div
+                                                class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button @click="copyLink(img.name)"
+                                                    class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                    <i class="ph ph-link text-lg"></i>
+                                                </button>
+                                                <button @click="deleteImage(img)"
+                                                    class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                    <i class="ph ph-trash text-lg"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div v-if="images.length > 0" class="flex items-center justify-center gap-4 mt-8">
+                            <button @click="loadPage(currentPage - 1)" :disabled="currentPage === 1"
+                                class="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                <i class="ph ph-caret-left"></i> Previous
+                            </button>
+                            <span class="text-gray-600 font-medium">Page {{ currentPage }}</span>
+                            <button @click="loadPage(currentPage + 1)" :disabled="images.length < pageSize"
+                                class="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                Next <i class="ph ph-caret-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Settings View -->
+                    <div v-if="currentView === 'settings'" class="max-w-4xl mx-auto">
+                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <!-- Settings Tabs -->
+                            <div class="flex border-b border-gray-200 overflow-x-auto">
+                                <button v-for="tab in settingsTabs" :key="tab.id" @click="currentSettingsTab = tab.id"
+                                    class="px-6 py-4 text-sm font-medium transition-colors whitespace-nowrap"
+                                    :class="currentSettingsTab === tab.id ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'">
+                                    {{ tab.label }}
+                                </button>
+                            </div>
+
+                            <!-- Settings Content -->
+                            <div class="p-6">
+                                <div v-if="loadingSettings" class="flex justify-center py-12">
+                                    <i class="ph ph-spinner animate-spin text-3xl text-blue-600"></i>
+                                </div>
+
+                                <div v-else class="space-y-8">
+
+                                    <!-- Security Settings -->
+                                    <div v-if="currentSettingsTab === 'security'" class="space-y-6">
+                                        <section>
+                                            <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                                <i class="ph ph-lock-key text-blue-600"></i> Authentication
+                                            </h3>
+                                            <div class="grid gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">User
+                                                        Auth Code</label>
+                                                    <input v-model="settings.security.auth.user.authCode" type="text"
+                                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none">
+                                                </div>
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label
+                                                            class="block text-sm font-medium text-gray-700 mb-1">Admin
+                                                            Username</label>
+                                                        <input v-model="settings.security.auth.admin.adminUsername"
+                                                            type="text"
+                                                            class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none">
+                                                    </div>
+                                                    <div>
+                                                        <label
+                                                            class="block text-sm font-medium text-gray-700 mb-1">Admin
+                                                            Password</label>
+                                                        <input v-model="settings.security.auth.admin.adminPassword"
+                                                            type="password"
+                                                            class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section>
+                                            <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                                <i class="ph ph-shield-check text-blue-600"></i> Access Control
+                                            </h3>
+                                            <div class="grid gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Allowed
+                                                        Domains</label>
+                                                    <input v-model="settings.security.access.allowedDomains" type="text"
+                                                        placeholder="example.com, test.com"
+                                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none">
+                                                    <p class="text-xs text-gray-500 mt-1">Comma separated domains</p>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <input v-model="settings.security.access.whiteListMode"
+                                                        type="checkbox" id="whitelist"
+                                                        class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                                    <label for="whitelist"
+                                                        class="text-sm font-medium text-gray-700">Enable Whitelist
+                                                        Mode</label>
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </div>
+
+                                    <!-- Upload Settings -->
+                                    <div v-if="currentSettingsTab === 'upload'" class="space-y-8">
+                                        <!-- Telegram -->
+                                        <section>
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
+                                                    <i class="ph ph-telegram-logo text-blue-500"></i> Telegram Channels
+                                                </h3>
+                                                <button @click="addChannel('telegram')"
+                                                    class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                                                    <i class="ph ph-plus"></i> Add Channel
+                                                </button>
+                                            </div>
+                                            <div class="space-y-4">
+                                                <div v-for="(channel, idx) in settings.upload.telegram.channels"
+                                                    :key="idx"
+                                                    class="p-4 bg-gray-50 rounded-lg border border-gray-200 relative group">
+                                                    <button @click="removeChannel('telegram', idx)"
+                                                        class="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"
+                                                        title="Remove">
+                                                        <i class="ph ph-x"></i>
+                                                    </button>
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label
+                                                                class="block text-xs font-medium text-gray-500 uppercase">Bot
+                                                                Token</label>
+                                                            <input v-model="channel.botToken" type="text"
+                                                                class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                        </div>
+                                                        <div>
+                                                            <label
+                                                                class="block text-xs font-medium text-gray-500 uppercase">Chat
+                                                                ID</label>
+                                                            <input v-model="channel.chatId" type="text"
+                                                                class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3 flex items-center gap-2">
+                                                        <input v-model="channel.enabled" type="checkbox"
+                                                            class="rounded text-blue-600">
+                                                        <span class="text-sm text-gray-700">Enabled</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <!-- R2 -->
+                                        <section>
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
+                                                    <i class="ph ph-cloud text-orange-500"></i> Cloudflare R2
+                                                </h3>
+                                                <button @click="addChannel('cfr2')"
+                                                    class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                                                    <i class="ph ph-plus"></i> Add Channel
+                                                </button>
+                                            </div>
+                                            <div class="space-y-4">
+                                                <div v-for="(channel, idx) in settings.upload.cfr2.channels" :key="idx"
+                                                    class="p-4 bg-gray-50 rounded-lg border border-gray-200 relative">
+                                                    <button @click="removeChannel('cfr2', idx)"
+                                                        class="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1">
+                                                        <i class="ph ph-x"></i>
+                                                    </button>
+                                                    <div>
+                                                        <label
+                                                            class="block text-xs font-medium text-gray-500 uppercase">Public
+                                                            URL</label>
+                                                        <input v-model="channel.publicUrl" type="text"
+                                                            class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                    </div>
+                                                    <div class="mt-3 flex items-center gap-2">
+                                                        <input v-model="channel.enabled" type="checkbox"
+                                                            class="rounded text-blue-600">
+                                                        <span class="text-sm text-gray-700">Enabled</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <!-- S3 -->
+                                        <section>
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h3 class="text-lg font-medium text-gray-900 flex items-center gap-2">
+                                                    <i class="ph ph-hard-drives text-green-600"></i> S3 Storage
+                                                </h3>
+                                                <button @click="addChannel('s3')"
+                                                    class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                                                    <i class="ph ph-plus"></i> Add Channel
+                                                </button>
+                                            </div>
+                                            <div class="space-y-4">
+                                                <div v-for="(channel, idx) in settings.upload.s3.channels" :key="idx"
+                                                    class="p-4 bg-gray-50 rounded-lg border border-gray-200 relative">
+                                                    <button @click="removeChannel('s3', idx)"
+                                                        class="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1">
+                                                        <i class="ph ph-x"></i>
+                                                    </button>
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label
+                                                                class="block text-xs font-medium text-gray-500 uppercase">Endpoint</label>
+                                                            <input v-model="channel.endpoint" type="text"
+                                                                class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                        </div>
+                                                        <div>
+                                                            <label
+                                                                class="block text-xs font-medium text-gray-500 uppercase">Bucket
+                                                                Name</label>
+                                                            <input v-model="channel.bucketName" type="text"
+                                                                class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                        </div>
+                                                        <div>
+                                                            <label
+                                                                class="block text-xs font-medium text-gray-500 uppercase">Access
+                                                                Key ID</label>
+                                                            <input v-model="channel.accessKeyId" type="text"
+                                                                class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                        </div>
+                                                        <div>
+                                                            <label
+                                                                class="block text-xs font-medium text-gray-500 uppercase">Secret
+                                                                Access Key</label>
+                                                            <input v-model="channel.secretAccessKey" type="password"
+                                                                class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                        </div>
+                                                        <div>
+                                                            <label
+                                                                class="block text-xs font-medium text-gray-500 uppercase">Region</label>
+                                                            <input v-model="channel.region" type="text"
+                                                                class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm"
+                                                                placeholder="auto">
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3 flex items-center gap-4">
+                                                        <div class="flex items-center gap-2">
+                                                            <input v-model="channel.enabled" type="checkbox"
+                                                                class="rounded text-blue-600">
+                                                            <span class="text-sm text-gray-700">Enabled</span>
+                                                        </div>
+                                                        <div class="flex items-center gap-2">
+                                                            <input v-model="channel.pathStyle" type="checkbox"
+                                                                class="rounded text-blue-600">
+                                                            <span class="text-sm text-gray-700">Force Path Style</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </div>
+
+                                    <!-- Page Settings -->
+                                    <div v-if="currentSettingsTab === 'page'" class="space-y-6">
+                                        <div v-for="item in settings.page.config" :key="item.id"
+                                            class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">{{ item.label
+                                                }}</label>
+
+                                            <!-- Text Input -->
+                                            <input v-if="!item.type || item.type === 'text'" v-model="item.value"
+                                                type="text" :placeholder="item.placeholder"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none">
+
+                                            <!-- Select -->
+                                            <select v-else-if="item.type === 'select'" v-model="item.value"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                                <option v-for="opt in item.options" :key="opt.value" :value="opt.value">
+                                                    {{ opt.label }}</option>
+                                            </select>
+
+                                            <!-- Boolean -->
+                                            <div v-else-if="item.type === 'boolean'"
+                                                class="flex items-center gap-2 mt-2">
+                                                <input v-model="item.value" type="checkbox"
+                                                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                                <span class="text-sm text-gray-600">Enabled</span>
+                                            </div>
+
+                                            <p v-if="item.tooltip" class="text-xs text-gray-500 mt-1"
+                                                v-html="item.tooltip"></p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Others Settings -->
+                                    <div v-if="currentSettingsTab === 'others'" class="space-y-6">
+                                        <section class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                            <h3 class="text-sm font-medium text-gray-900 mb-3">Telemetry</h3>
+                                            <div class="flex items-center gap-2">
+                                                <input v-model="settings.others.telemetry.enabled" type="checkbox"
+                                                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                                <label class="text-sm text-gray-700">Enable Telemetry</label>
+                                            </div>
+                                        </section>
+
+                                        <section class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                            <h3 class="text-sm font-medium text-gray-900 mb-3">Random Image API</h3>
+                                            <div class="space-y-3">
+                                                <div class="flex items-center gap-2">
+                                                    <input v-model="settings.others.randomImageAPI.enabled"
+                                                        type="checkbox"
+                                                        class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                                    <label class="text-sm text-gray-700">Enable API</label>
+                                                </div>
+                                                <div>
+                                                    <label
+                                                        class="block text-xs font-medium text-gray-500 uppercase">Allowed
+                                                        Directory</label>
+                                                    <input v-model="settings.others.randomImageAPI.allowedDir"
+                                                        type="text"
+                                                        class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                            <h3 class="text-sm font-medium text-gray-900 mb-3">WebDAV</h3>
+                                            <div class="space-y-3">
+                                                <div class="flex items-center gap-2">
+                                                    <input v-model="settings.others.webDAV.enabled" type="checkbox"
+                                                        class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                                    <label class="text-sm text-gray-700">Enable WebDAV</label>
+                                                </div>
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label
+                                                            class="block text-xs font-medium text-gray-500 uppercase">Username</label>
+                                                        <input v-model="settings.others.webDAV.username" type="text"
+                                                            class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                    </div>
+                                                    <div>
+                                                        <label
+                                                            class="block text-xs font-medium text-gray-500 uppercase">Password</label>
+                                                        <input v-model="settings.others.webDAV.password" type="password"
+                                                            class="w-full mt-1 px-3 py-2 rounded border border-gray-300 text-sm">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <!-- Settings Footer -->
+                            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                                <button @click="saveSettings" :disabled="savingSettings"
+                                    class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-70">
+                                    <i v-if="savingSettings" class="ph ph-spinner animate-spin"></i>
+                                    <span>Save Changes</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+            <transition-group name="fade">
+                <div v-for="toast in toasts" :key="toast.id"
+                    class="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 pointer-events-auto min-w-[300px]">
+                    <i
+                        :class="['ph text-xl', toast.type === 'success' ? 'ph-check-circle text-green-400' : 'ph-warning-circle text-red-400']"></i>
+                    <span class="text-sm font-medium">{{ toast.message }}</span>
+                </div>
+            </transition-group>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                // State
+                const isLoggedIn = ref(false);
+                const authCode = ref('');
+                const loading = ref(false);
+                const error = ref('');
+                const currentView = ref('images');
+                const viewMode = ref('grid');
+                const images = ref([]);
+                const directories = ref([]);
+                const currentDir = ref('/');
+                const searchQuery = ref('');
+                const loadingImages = ref(false);
+                const currentPage = ref(1);
+                const pageSize = ref(50);
+                const toasts = ref([]);
+
+                // Settings State
+                const currentSettingsTab = ref('security');
+                const loadingSettings = ref(false);
+                const savingSettings = ref(false);
+                const settings = ref({
+                    security: { auth: { user: {}, admin: {} }, access: {} },
+                    upload: { telegram: { channels: [] }, cfr2: { channels: [] }, s3: { channels: [] } },
+                    page: { config: [] },
+                    others: { telemetry: {}, randomImageAPI: {}, webDAV: {} }
+                });
+
+                const menuItems = [
+                    { id: 'images', label: 'Images', icon: 'ph-image' },
+                    { id: 'settings', label: 'Settings', icon: 'ph-gear' },
+                ];
+
+                const settingsTabs = [
+                    { id: 'security', label: 'Security' },
+                    { id: 'upload', label: 'Upload Channels' },
+                    { id: 'page', label: 'Page Config' },
+                    { id: 'others', label: 'Others' },
+                ];
+
+                const currentViewLabel = computed(() => {
+                    return menuItems.find(i => i.id === currentView.value)?.label || 'Dashboard';
+                });
+
+                // Watch for view change to load settings
+                watch(currentView, (newVal) => {
+                    if (newVal === 'settings') {
+                        fetchAllSettings();
+                    }
+                });
+
+                // Methods
+                const showToast = (message, type = 'success') => {
+                    const id = Date.now();
+                    toasts.value.push({ id, message, type });
+                    setTimeout(() => {
+                        toasts.value = toasts.value.filter(t => t.id !== id);
+                    }, 3000);
+                };
+
+                const handleLogin = async () => {
+                    loading.value = true;
+                    error.value = '';
+                    try {
+                        const res = await fetch('/api/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ authCode: authCode.value })
+                        });
+
+                        if (res.ok) {
+                            isLoggedIn.value = true;
+                            localStorage.setItem('authCode', authCode.value);
+                            fetchImages();
+                        } else {
+                            error.value = 'Invalid authentication code';
+                        }
+                    } catch (e) {
+                        error.value = 'Login failed. Please try again.';
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const logout = () => {
+                    isLoggedIn.value = false;
+                    authCode.value = '';
+                    localStorage.removeItem('authCode');
+                };
+
+                const fetchImages = async (resetPage = false) => {
+                    if (resetPage) currentPage.value = 1;
+                    loadingImages.value = true;
+
+                    try {
+                        const start = (currentPage.value - 1) * pageSize.value;
+                        const params = new URLSearchParams({
+                            start,
+                            count: pageSize.value,
+                            dir: currentDir.value,
+                            search: searchQuery.value
+                        });
+
+                        const res = await fetch(`/api/manage/list?${params}`);
+                        const data = await res.json();
+
+                        if (data.files) {
+                            images.value = data.files;
+                            if (data.directories) directories.value = data.directories;
+                        }
+                    } catch (e) {
+                        showToast('Failed to load images', 'error');
+                    } finally {
+                        loadingImages.value = false;
+                    }
+                };
+
+                const deleteImage = async (img) => {
+                    if (!confirm(`Are you sure you want to delete ${img.name}?`)) return;
+
+                    try {
+                        const res = await fetch(`/api/manage/delete/${encodeURIComponent(img.name)}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': authCode.value }
+                        });
+
+                        const data = await res.json();
+                        if (data.success) {
+                            showToast('Image deleted successfully');
+                            fetchImages();
+                        } else {
+                            throw new Error(data.error);
+                        }
+                    } catch (e) {
+                        showToast('Failed to delete image', 'error');
+                    }
+                };
+
+                // Settings Methods
+                const fetchAllSettings = async () => {
+                    loadingSettings.value = true;
+                    try {
+                        const [sec, up, pg, oth] = await Promise.all([
+                            fetch('/api/manage/sysConfig/security').then(r => r.json()),
+                            fetch('/api/manage/sysConfig/upload').then(r => r.json()),
+                            fetch('/api/manage/sysConfig/page').then(r => r.json()),
+                            fetch('/api/manage/sysConfig/others').then(r => r.json())
+                        ]);
+
+                        settings.value.security = sec;
+                        settings.value.upload = up;
+                        settings.value.page = pg;
+                        settings.value.others = oth;
+                    } catch (e) {
+                        showToast('Failed to load settings', 'error');
+                        console.error(e);
+                    } finally {
+                        loadingSettings.value = false;
+                    }
+                };
+
+                const saveSettings = async () => {
+                    savingSettings.value = true;
+                    try {
+                        // Save currently active tab or all? 
+                        // The API is split, so let's save all to be safe, or just the active one.
+                        // Saving all ensures consistency.
+
+                        await Promise.all([
+                            fetch('/api/manage/sysConfig/security', { method: 'POST', body: JSON.stringify(settings.value.security) }),
+                            fetch('/api/manage/sysConfig/upload', { method: 'POST', body: JSON.stringify(settings.value.upload) }),
+                            fetch('/api/manage/sysConfig/page', { method: 'POST', body: JSON.stringify(settings.value.page) }),
+                            fetch('/api/manage/sysConfig/others', { method: 'POST', body: JSON.stringify(settings.value.others) })
+                        ]);
+
+                        showToast('Settings saved successfully');
+                    } catch (e) {
+                        showToast('Failed to save settings', 'error');
+                    } finally {
+                        savingSettings.value = false;
+                    }
+                };
+
+                const addChannel = (type) => {
+                    if (type === 'telegram') {
+                        settings.value.upload.telegram.channels.push({
+                            id: Date.now(),
+                            botToken: '',
+                            chatId: '',
+                            enabled: true
+                        });
+                    } else if (type === 'cfr2') {
+                        settings.value.upload.cfr2.channels.push({
+                            id: Date.now(),
+                            publicUrl: '',
+                            enabled: true
+                        });
+                    } else if (type === 's3') {
+                        settings.value.upload.s3.channels.push({
+                            id: Date.now(),
+                            endpoint: '',
+                            bucketName: '',
+                            accessKeyId: '',
+                            secretAccessKey: '',
+                            region: 'auto',
+                            enabled: true
+                        });
+                    }
+                };
+
+                const removeChannel = (type, index) => {
+                    if (type === 'telegram') {
+                        settings.value.upload.telegram.channels.splice(index, 1);
+                    } else if (type === 'cfr2') {
+                        settings.value.upload.cfr2.channels.splice(index, 1);
+                    } else if (type === 's3') {
+                        settings.value.upload.s3.channels.splice(index, 1);
+                    }
+                };
+
+                const getImageUrl = (path) => {
+                    return `/file/${path}`;
+                };
+
+                const formatSize = (bytes) => {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                };
+
+                const formatDate = (timestamp) => {
+                    if (!timestamp) return '-';
+                    return new Date(timestamp).toLocaleString();
+                };
+
+                const copyLink = (path) => {
+                    const url = `${window.location.origin}/file/${path}`;
+                    navigator.clipboard.writeText(url);
+                    showToast('Link copied to clipboard');
+                };
+
+                const loadPage = (page) => {
+                    currentPage.value = page;
+                    fetchImages();
+                };
+
+                const handleImageError = (e) => {
+                    e.target.src = 'https://via.placeholder.com/150?text=Error';
+                };
+
+                // Lifecycle
+                onMounted(() => {
+                    const savedCode = localStorage.getItem('authCode');
+                    if (savedCode) {
+                        authCode.value = savedCode;
+                        handleLogin();
+                    }
+                });
+
+                return {
+                    isLoggedIn,
+                    authCode,
+                    loading,
+                    error,
+                    handleLogin,
+                    logout,
+                    currentView,
+                    currentViewLabel,
+                    menuItems,
+                    images,
+                    viewMode,
+                    loadingImages,
+                    fetchImages,
+                    getImageUrl,
+                    formatSize,
+                    formatDate,
+                    deleteImage,
+                    copyLink,
+                    directories,
+                    currentDir,
+                    searchQuery,
+                    currentPage,
+                    pageSize,
+                    loadPage,
+                    toasts,
+                    handleImageError,
+                    // Settings
+                    settings,
+                    currentSettingsTab,
+                    settingsTabs,
+                    loadingSettings,
+                    savingSettings,
+                    saveSettings,
+                    addChannel,
+                    removeChannel
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

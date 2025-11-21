@@ -1,25 +1,420 @@
-<!doctype html><html lang=""><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png"><link rel="mask-icon" href="/logo.png" color="#f4b400"><meta name="description" content="Sanyue ImgHub - A modern file hosting platform"><meta name="keywords" content="Sanyue, ImgHub, file hosting, image hosting, cloud storage"><meta name="author" content="SanyueQi"><title>Sanyue ImgHub</title><script defer="defer" src="/js/app.02dbf6ff.js"></script><link href="/css/app.6e9711cc.css" rel="stylesheet"></head><body><noscript><strong>We're sorry but sanyue_imghub doesn't work properly without JavaScript enabled. Please enable it to continue.</strong></noscript><div id="app"></div></body></html><style>/* 下拉菜单样式 */
-.el-dropdown__popper.el-popper {
-    border-radius: 12px;
-    border: none;
-    background-color: var(--popper-bg-color);
-    backdrop-filter: blur(10px);
-    box-shadow: var(--popper-shadow);
-}
-.el-dropdown__popper.el-popper .el-dropdown-menu {
-    background: none;
-    border: none;
-}
-.el-dropdown__popper.el-popper .el-dropdown-menu__item {
-    border: none;
-    background: none;
-}
-.el-popper.is-light>.el-popper__arrow::before {
-    background: none;
-    border: none;
-}
+<!DOCTYPE html>
+<html lang="en">
 
-/* 加载动画样式 */
-.el-loading-mask {
-    border-radius: 12px;
-}</style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanyue ImgHub</title>
+    <meta name="description" content="Simple, fast, and secure image hosting.">
+    <link rel="icon" href="/logo.png">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f5f7;
+            /* Apple light gray background */
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .upload-zone {
+            transition: all 0.3s ease;
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%233B82F6FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+        }
+
+        .upload-zone.dragging {
+            background-color: rgba(59, 130, 246, 0.05);
+            transform: scale(1.01);
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        .list-enter-active,
+        .list-leave-active {
+            transition: all 0.4s ease;
+        }
+
+        .list-enter-from,
+        .list-leave-to {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0071e3', /* Apple Blue */
+                        secondary: '#86868b',
+                    },
+                    boxShadow: {
+                        'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
+                        'apple-hover': '0 8px 32px rgba(0, 0, 0, 0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="text-gray-900 antialiased min-h-screen flex flex-col">
+    <div id="app" class="flex-1 flex flex-col">
+        <!-- Navigation -->
+        <nav class="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-gray-200/50">
+            <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img src="/logo.png" alt="Logo" class="w-8 h-8 rounded-lg">
+                    <span class="font-semibold text-lg tracking-tight">Sanyue ImgHub</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/admin.html"
+                        class="text-sm font-medium text-gray-600 hover:text-primary transition-colors flex items-center gap-1">
+                        Admin
+                        <i class="ph ph-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 pt-24 pb-12 px-6">
+            <div class="max-w-4xl mx-auto space-y-12">
+
+                <!-- Hero Section -->
+                <div class="text-center space-y-4">
+                    <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
+                        Upload simply. <span class="text-primary">Share instantly.</span>
+                    </h1>
+                    <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+                        Drag and drop your images here, or paste from clipboard. Fast, secure, and reliable hosting for
+                        your visual content.
+                    </p>
+                </div>
+
+                <!-- Upload Area -->
+                <div class="relative group cursor-pointer" @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop" @click="triggerFileInput"
+                    @paste="handlePaste">
+                    <input type="file" ref="fileInput" class="hidden" multiple accept="image/*"
+                        @change="handleFileSelect">
+
+                    <div class="upload-zone rounded-3xl text-center transition-all duration-500 bg-white shadow-apple hover:shadow-apple-hover overflow-hidden"
+                        :class="[
+                            isDragging ? 'dragging' : '',
+                            uploads.length > 0 ? 'p-6 md:p-8' : 'p-12 md:p-20'
+                        ]">
+                        <div class="space-y-6 pointer-events-none transition-all duration-500"
+                            :class="uploads.length > 0 ? 'flex items-center gap-6 space-y-0 text-left justify-center' : ''">
+
+                            <div class="bg-blue-50 text-primary rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110"
+                                :class="[
+                                     uploads.length > 0 ? 'w-12 h-12 mb-0' : 'w-20 h-20 mx-auto mb-6'
+                                 ]">
+                                <i class="ph ph-cloud-arrow-up transition-all duration-500"
+                                    :class="uploads.length > 0 ? 'text-2xl' : 'text-4xl'"></i>
+                            </div>
+
+                            <div class="space-y-2 transition-all duration-500"
+                                :class="uploads.length > 0 ? 'space-y-1' : ''">
+                                <h3 class="font-semibold text-gray-900 transition-all duration-500"
+                                    :class="uploads.length > 0 ? 'text-lg' : 'text-xl'">
+                                    {{ uploads.length > 0 ? 'Add more images' : 'Drop your images here' }}
+                                </h3>
+                                <p class="text-gray-500 transition-all duration-500"
+                                    :class="uploads.length > 0 ? 'text-sm' : ''">
+                                    {{ uploads.length > 0 ? 'or click to browse' : 'or click to browse' }}
+                                </p>
+                            </div>
+
+                            <div v-if="uploads.length === 0"
+                                class="flex items-center justify-center gap-4 text-sm text-gray-400 animate-fade-in">
+                                <span class="flex items-center gap-1"><i class="ph ph-image"></i> PNG, JPG, GIF,
+                                    WEBP</span>
+                                <span class="flex items-center gap-1"><i class="ph ph-file-size"></i> Max 20MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload List -->
+                <transition-group name="list" tag="div" class="space-y-4" v-if="uploads.length > 0">
+                    <div v-for="file in uploads" :key="file.id"
+                        class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex gap-4 items-start overflow-hidden">
+                        <!-- Preview -->
+                        <div
+                            class="w-24 h-24 flex-shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 relative">
+                            <img v-if="file.preview" :src="file.preview" class="w-full h-full object-cover">
+                            <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
+                                <i class="ph ph-image text-2xl"></i>
+                            </div>
+                            <!-- Status Overlay -->
+                            <div v-if="file.status === 'uploading'"
+                                class="absolute inset-0 bg-black/20 flex items-center justify-center backdrop-blur-[1px]">
+                                <i class="ph ph-spinner animate-spin text-white text-2xl"></i>
+                            </div>
+                            <div v-else-if="file.status === 'error'"
+                                class="absolute inset-0 bg-red-500/10 flex items-center justify-center backdrop-blur-[1px]">
+                                <i class="ph ph-warning-circle text-red-500 text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0 py-1">
+                            <div class="flex items-start justify-between mb-2">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 truncate pr-4" :title="file.name">{{ file.name
+                                        }}</h4>
+                                    <p class="text-xs text-gray-500">{{ formatSize(file.size) }}</p>
+                                </div>
+                                <button @click="removeFile(file.id)"
+                                    class="text-gray-400 hover:text-red-500 transition-colors">
+                                    <i class="ph ph-x"></i>
+                                </button>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div v-if="file.status === 'uploading'"
+                                class="w-full bg-gray-100 rounded-full h-1.5 mt-4 overflow-hidden">
+                                <div class="bg-primary h-full rounded-full transition-all duration-300"
+                                    style="width: 100%" :class="{'animate-pulse': true}"></div>
+                            </div>
+
+                            <!-- Error Message -->
+                            <div v-else-if="file.status === 'error'"
+                                class="text-sm text-red-500 mt-2 flex items-center gap-1">
+                                <i class="ph ph-warning"></i> {{ file.error || 'Upload failed' }}
+                            </div>
+
+                            <!-- Success Actions -->
+                            <div v-else-if="file.status === 'success'" class="mt-2 space-y-3">
+                                <div class="flex flex-wrap gap-2">
+                                    <button v-for="type in ['url', 'markdown', 'html', 'bbcode']" :key="type"
+                                        @click="copyLink(file, type)"
+                                        class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-all duration-200 flex items-center gap-1.5"
+                                        :class="file.copied === type ? 'bg-green-50 border-green-200 text-green-600' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'">
+                                        <i class="ph" :class="file.copied === type ? 'ph-check' : 'ph-copy'"></i>
+                                        {{ type.toUpperCase() }}
+                                    </button>
+                                </div>
+                                <div
+                                    class="bg-gray-50 rounded-lg px-3 py-2 text-xs font-mono text-gray-600 break-all select-all cursor-text border border-gray-100">
+                                    {{ getLink(file, 'url') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </transition-group>
+
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="py-8 text-center text-sm text-gray-500 border-t border-gray-200/50 bg-white/50 backdrop-blur-sm">
+            <div class="max-w-7xl mx-auto px-6">
+                <p>&copy; {{ new Date().getFullYear() }} Sanyue ImgHub. All rights reserved.</p>
+            </div>
+        </footer>
+
+        <!-- Toast Notification -->
+        <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+            <transition-group name="fade">
+                <div v-for="toast in toasts" :key="toast.id"
+                    class="bg-gray-900/90 backdrop-blur text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 pointer-events-auto min-w-[300px] transform transition-all duration-300 border border-white/10">
+                    <i
+                        :class="['ph text-xl', toast.type === 'success' ? 'ph-check-circle text-green-400' : 'ph-warning-circle text-red-400']"></i>
+                    <span class="text-sm font-medium">{{ toast.message }}</span>
+                </div>
+            </transition-group>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
+
+        createApp({
+            setup() {
+                const isDragging = ref(false);
+                const fileInput = ref(null);
+                const uploads = ref([]);
+                const toasts = ref([]);
+
+                // Paste Event Listener
+                const handleGlobalPaste = (e) => {
+                    handlePaste(e);
+                };
+
+                onMounted(() => {
+                    window.addEventListener('paste', handleGlobalPaste);
+                });
+
+                onUnmounted(() => {
+                    window.removeEventListener('paste', handleGlobalPaste);
+                });
+
+                const triggerFileInput = () => {
+                    fileInput.value.click();
+                };
+
+                const handleFileSelect = (e) => {
+                    const files = Array.from(e.target.files);
+                    processFiles(files);
+                    e.target.value = ''; // Reset input
+                };
+
+                const handleDrop = (e) => {
+                    isDragging.value = false;
+                    const files = Array.from(e.dataTransfer.files);
+                    processFiles(files);
+                };
+
+                const handlePaste = (e) => {
+                    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                    const files = [];
+                    for (let item of items) {
+                        if (item.kind === 'file') {
+                            files.push(item.getAsFile());
+                        }
+                    }
+                    if (files.length > 0) {
+                        processFiles(files);
+                    }
+                };
+
+                const processFiles = (files) => {
+                    files.forEach(file => {
+                        if (!file.type.startsWith('image/')) {
+                            showToast(`Skipped ${file.name}: Not an image`, 'error');
+                            return;
+                        }
+
+                        const uploadItem = {
+                            id: Date.now() + Math.random(),
+                            name: file.name,
+                            size: file.size,
+                            file: file,
+                            status: 'uploading', // uploading, success, error
+                            progress: 0,
+                            preview: URL.createObjectURL(file),
+                            result: null,
+                            error: null,
+                            copied: null
+                        };
+
+                        uploads.value.unshift(uploadItem);
+                        uploadFile(uploadItem);
+                    });
+                };
+
+                const uploadFile = async (item) => {
+                    const formData = new FormData();
+                    formData.append('file', item.file);
+
+                    try {
+                        const res = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            item.status = 'success';
+                            // The API returns an array of objects with 'src'
+                            if (Array.isArray(data) && data.length > 0) {
+                                item.result = data[0].src;
+                            } else {
+                                throw new Error('Invalid response format');
+                            }
+                            showToast('Upload successful');
+                        } else {
+                            throw new Error(data.error || 'Upload failed');
+                        }
+                    } catch (e) {
+                        item.status = 'error';
+                        item.error = e.message;
+                        showToast(`Upload failed: ${e.message}`, 'error');
+                    }
+                };
+
+                const removeFile = (id) => {
+                    uploads.value = uploads.value.filter(u => u.id !== id);
+                };
+
+                const getLink = (item, type) => {
+                    if (!item.result) return '';
+                    const url = item.result.startsWith('http') ? item.result : window.location.origin + item.result;
+
+                    switch (type) {
+                        case 'markdown': return `![${item.name}](${url})`;
+                        case 'html': return `<img src="${url}" alt="${item.name}" />`;
+                        case 'bbcode': return `[img]${url}[/img]`;
+                        default: return url;
+                    }
+                };
+
+                const copyLink = async (item, type) => {
+                    const text = getLink(item, type);
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        item.copied = type;
+                        setTimeout(() => item.copied = null, 2000);
+                        showToast('Link copied to clipboard');
+                    } catch (e) {
+                        showToast('Failed to copy link', 'error');
+                    }
+                };
+
+                const formatSize = (bytes) => {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                };
+
+                const showToast = (message, type = 'success') => {
+                    const id = Date.now();
+                    toasts.value.push({ id, message, type });
+                    setTimeout(() => {
+                        toasts.value = toasts.value.filter(t => t.id !== id);
+                    }, 3000);
+                };
+
+                return {
+                    isDragging,
+                    fileInput,
+                    uploads,
+                    toasts,
+                    triggerFileInput,
+                    handleFileSelect,
+                    handleDrop,
+                    handlePaste,
+                    removeFile,
+                    getLink,
+                    copyLink,
+                    formatSize
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

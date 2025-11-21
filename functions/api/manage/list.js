@@ -1,5 +1,7 @@
-import { readIndex, mergeOperationsToIndex, deleteAllOperations, rebuildIndex,
-    getIndexInfo, getIndexStorageStats } from '../../utils/indexManager.js';
+import {
+    readIndex, mergeOperationsToIndex, deleteAllOperations, rebuildIndex,
+    getIndexInfo, getIndexStorageStats
+} from '../../utils/indexManager.js';
 import { getDatabase } from '../../utils/databaseAdapter.js';
 
 export async function onRequest(context) {
@@ -85,10 +87,10 @@ export async function onRequest(context) {
                 listType,
                 countOnly: true
             });
-            
-            return new Response(JSON.stringify({ 
+
+            return new Response(JSON.stringify({
                 sum: result.totalCount,
-                indexLastUpdated: result.indexLastUpdated 
+                indexLastUpdated: result.indexLastUpdated
             }), {
                 headers: { "Content-Type": "application/json" }
             });
@@ -107,8 +109,8 @@ export async function onRequest(context) {
 
         // 索引读取失败，直接从 KV 中获取所有文件记录
         if (!result.success) {
-            const dbRecords = await getAllFileRecords(context.env, dir);
-            
+            const dbRecords = await getAllFileRecords(context.env, dir, search);
+
             return new Response(JSON.stringify({
                 files: dbRecords.files,
                 directories: dbRecords.directories,
@@ -150,7 +152,7 @@ export async function onRequest(context) {
     }
 }
 
-async function getAllFileRecords(env, dir) {
+async function getAllFileRecords(env, dir, search = '') {
     const allRecords = [];
     let cursor = null;
 
@@ -187,7 +189,7 @@ async function getAllFileRecords(env, dir) {
             }
 
             if (!cursor) break;
-            
+
             // 添加协作点
             await new Promise(resolve => setTimeout(resolve, 10));
         }
@@ -195,7 +197,22 @@ async function getAllFileRecords(env, dir) {
         // 提取目录信息
         const directories = new Set();
         const filteredRecords = [];
+
+        // 预处理搜索关键字
+        const searchLower = search ? search.toLowerCase() : '';
+
         allRecords.forEach(item => {
+            // 搜索过滤
+            if (searchLower) {
+                const fileName = item.metadata?.FileName || item.name.split('/').pop();
+                const matchesName = fileName.toLowerCase().includes(searchLower);
+                const matchesId = item.name.toLowerCase().includes(searchLower);
+
+                if (!matchesName && !matchesId) {
+                    return; // 跳过不匹配的文件
+                }
+            }
+
             const subDir = item.name.substring(dir.length);
             const firstSlashIndex = subDir.indexOf('/');
             if (firstSlashIndex !== -1) {
