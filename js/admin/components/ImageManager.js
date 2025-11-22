@@ -1,4 +1,4 @@
-import { store } from '../store.js';
+import { store, showToast } from '../store.js';
 import { fetchImages, deleteImage, deleteSelected, moveSelected } from '../api.js';
 import { getImageUrl, getImageName, formatDate, formatSize, copyLink } from '../utils.js';
 
@@ -68,7 +68,8 @@ export default {
             openPreview,
             handleImageError,
             downloadSelected,
-            confirmDelete
+            confirmDelete,
+            showToast
         };
     },
     template: `
@@ -199,12 +200,12 @@ export default {
                                 {{ formatSize(img) }}
                             </span>
                             <div class="flex items-center gap-1">
-                                <button @click="copyLink(img.name, store.showToast, 'url')" 
+                                <button @click="copyLink(img.name, showToast, 'url')" 
                                     class="p-1 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-md transition-colors"
                                     title="Copy URL">
                                     <i class="ph ph-link text-lg"></i>
                                 </button>
-                                <button @click="copyLink(img.name, store.showToast, 'markdown')" 
+                                <button @click="copyLink(img.name, showToast, 'markdown')" 
                                     class="p-1 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-md transition-colors"
                                     title="Copy Markdown">
                                     <i class="ph ph-markdown-logo text-lg"></i>
@@ -268,12 +269,12 @@ export default {
                                     formatDate(img.metadata?.TimeStamp) }}</td>
                                 <td class="px-4 md:px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button @click.stop="copyLink(img.name, store.showToast, 'url')"
+                                        <button @click.stop="copyLink(img.name, showToast, 'url')"
                                             class="p-1.5 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors"
                                             title="Copy URL">
                                             <i class="ph ph-link text-lg"></i>
                                         </button>
-                                        <button @click.stop="copyLink(img.name, store.showToast, 'markdown')"
+                                        <button @click.stop="copyLink(img.name, showToast, 'markdown')"
                                             class="p-1.5 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors"
                                             title="Copy Markdown">
                                             <i class="ph ph-markdown-logo text-lg"></i>
