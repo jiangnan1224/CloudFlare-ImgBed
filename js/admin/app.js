@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar.js';
 import Header from './components/Header.js';
 import ImageManager from './components/ImageManager.js';
 import Settings from './components/Settings.js';
-import { PreviewModal, MoveModal } from './components/Modals.js';
+import { PreviewModal, MoveModal, DeleteModal } from './components/Modals.js';
 
 const { createApp, onMounted, watch } = Vue;
 
@@ -17,7 +17,8 @@ const App = {
         ImageManager,
         Settings,
         PreviewModal,
-        MoveModal
+        MoveModal,
+        DeleteModal
     },
     setup() {
         // Watch for view change to load settings
@@ -87,6 +88,7 @@ const App = {
             <!-- Modals -->
             <PreviewModal />
             <MoveModal />
+            <DeleteModal />
 
             <!-- Toast Notification -->
             <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">

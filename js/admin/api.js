@@ -100,8 +100,8 @@ export const fetchImages = async (resetPage = false) => {
     }
 };
 
-export const deleteImage = async (img) => {
-    if (!confirm(`确定要删除 ${img.name.split('/').pop()} 吗？`)) return;
+export const deleteImage = async (img, skipConfirm = false) => {
+    if (!skipConfirm && !confirm(`确定要删除 ${img.name.split('/').pop()} 吗？`)) return;
 
     try {
         const credentials = localStorage.getItem('adminCredentials');
@@ -122,8 +122,8 @@ export const deleteImage = async (img) => {
     }
 };
 
-export const deleteSelected = async () => {
-    if (!confirm(`确定要删除 ${store.selectedImages.length} 张图片吗？`)) return;
+export const deleteSelected = async (skipConfirm = false) => {
+    if (!skipConfirm && !confirm(`确定要删除 ${store.selectedImages.length} 张图片吗？`)) return;
 
     let successCount = 0;
     for (const img of store.selectedImages) {

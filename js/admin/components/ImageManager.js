@@ -46,6 +46,11 @@ export default {
             });
         };
 
+        const confirmDelete = (target) => {
+            store.deleteTarget = target;
+            store.showDeleteModal = true;
+        };
+
         return {
             store,
             fetchImages,
@@ -62,7 +67,8 @@ export default {
             loadPage,
             openPreview,
             handleImageError,
-            downloadSelected
+            downloadSelected,
+            confirmDelete
         };
     },
     template: `
@@ -101,7 +107,7 @@ export default {
                                 class="px-3 py-1.5 bg-white text-gray-700 hover:bg-gray-50 rounded-lg font-medium shadow-sm transition-all flex items-center gap-2 text-sm">
                                 <i class="ph ph-download-simple text-lg"></i> 下载
                             </button>
-                            <button @click="deleteSelected"
+                            <button @click="confirmDelete('selected')"
                                 class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium shadow-lg shadow-red-500/30 transition-all flex items-center gap-2 text-sm">
                                 <i class="ph ph-trash text-lg"></i> 删除
                             </button>
@@ -180,32 +186,35 @@ export default {
                         <img :src="getImageUrl(img.name)" :alt="getImageName(img)" loading="lazy"
                             @error="handleImageError"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-
-                        <!-- Overlay Actions -->
-                        <div
-                            class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                            <button @click.stop="copyLink(img.name)"
-                                class="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-xl shadow-lg hover:scale-110 transition-all"
-                                title="Copy Link">
-                                <i class="ph ph-link text-lg"></i>
-                            </button>
-                            <button @click.stop="deleteImage(img)"
-                                class="p-2 bg-white/90 hover:bg-red-50 text-red-500 rounded-xl shadow-lg hover:scale-110 transition-all"
-                                title="Delete">
-                                <i class="ph ph-trash text-lg"></i>
-                            </button>
-                        </div>
                     </div>
                     <!-- Info -->
-                    <div class="p-4 bg-white/80 backdrop-blur-md">
-                        <p class="text-sm font-semibold text-gray-800 truncate" :title="getImageName(img)">
-                            {{ getImageName(img) }}</p>
-                        <div
-                            class="flex items-center justify-between mt-2 text-xs font-medium text-gray-500">
-                            <span>{{ formatDate(img.metadata?.TimeStamp) }}</span>
-                            <span
-                                class="bg-gray-100 px-2 py-1 rounded-md text-gray-600 border border-gray-200">{{
-                                formatSize(img) }}</span>
+                    <div class="p-3 bg-white/80 backdrop-blur-md">
+                        <div class="mb-2">
+                            <p class="text-sm font-semibold text-gray-800 truncate" :title="getImageName(img)">
+                                {{ getImageName(img) }}</p>
+                        </div>
+                        
+                        <div class="flex items-center justify-between gap-2 pt-2 border-t border-gray-100" @click.stop>
+                            <span class="text-xs text-gray-500 font-medium">
+                                {{ formatSize(img) }}
+                            </span>
+                            <div class="flex items-center gap-1">
+                                <button @click="copyLink(img.name, store.showToast, 'url')" 
+                                    class="p-1 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-md transition-colors"
+                                    title="Copy URL">
+                                    <i class="ph ph-link text-lg"></i>
+                                </button>
+                                <button @click="copyLink(img.name, store.showToast, 'markdown')" 
+                                    class="p-1 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-md transition-colors"
+                                    title="Copy Markdown">
+                                    <i class="ph ph-markdown-logo text-lg"></i>
+                                </button>
+                                <button @click="confirmDelete(img)" 
+                                    class="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                    title="Delete">
+                                    <i class="ph ph-trash text-lg"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -259,12 +268,19 @@ export default {
                                     formatDate(img.metadata?.TimeStamp) }}</td>
                                 <td class="px-4 md:px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button @click.stop="copyLink(img.name)"
-                                            class="p-1.5 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors">
+                                        <button @click.stop="copyLink(img.name, store.showToast, 'url')"
+                                            class="p-1.5 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="Copy URL">
                                             <i class="ph ph-link text-lg"></i>
                                         </button>
-                                        <button @click.stop="deleteImage(img)"
-                                            class="p-1.5 text-gray-500 hover:text-danger hover:bg-red-50 rounded-lg transition-colors">
+                                        <button @click.stop="copyLink(img.name, store.showToast, 'markdown')"
+                                            class="p-1.5 text-gray-500 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="Copy Markdown">
+                                            <i class="ph ph-markdown-logo text-lg"></i>
+                                        </button>
+                                        <button @click.stop="confirmDelete(img)"
+                                            class="p-1.5 text-gray-500 hover:text-danger hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete">
                                             <i class="ph ph-trash text-lg"></i>
                                         </button>
                                     </div>

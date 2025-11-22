@@ -1,6 +1,6 @@
 import { store } from '../store.js';
-import { getImageUrl, getImageName } from '../utils.js';
-import { moveSelected } from '../api.js';
+import { getImageUrl, getImageName, formatSize, formatDate } from '../utils.js';
+import { moveSelected, deleteImage, deleteSelected } from '../api.js';
 
 export const PreviewModal = {
     setup() {
@@ -70,6 +70,57 @@ export const MoveModal = {
                         <i v-if="store.movingImages" class="ph ph-spinner animate-spin"></i>
                         <span>移动图片</span>
                     </button>
+                </div>
+            </div>
+        </div>
+    `
+};
+
+export const DeleteModal = {
+    setup() {
+        const confirmDelete = async () => {
+            store.deletingImages = true;
+            try {
+                if (store.deleteTarget === 'selected') {
+                    await deleteSelected(true); // true = skip confirm
+                } else {
+                    await deleteImage(store.deleteTarget, true); // true = skip confirm
+                }
+                store.showDeleteModal = false;
+                store.deleteTarget = null;
+            } finally {
+                store.deletingImages = false;
+            }
+        };
+
+        return { store, confirmDelete };
+    },
+    template: `
+        <div v-if="store.showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+            <div class="absolute inset-0 bg-black/20 backdrop-blur-sm" @click="store.showDeleteModal = false"></div>
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm relative z-10 overflow-hidden">
+                <div class="p-6 text-center">
+                    <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="ph ph-trash text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">确认删除？</h3>
+                    <p class="text-gray-500 text-sm mb-6">
+                        {{ store.deleteTarget === 'selected' 
+                            ? \`确定要删除选中的 \${store.selectedImages.length} 张图片吗？\`
+                            : '确定要删除这张图片吗？此操作无法撤销。' 
+                        }}
+                    </p>
+                    <div class="flex gap-3">
+                        <button @click="store.showDeleteModal = false" 
+                            class="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors">
+                            取消
+                        </button>
+                        <button @click="confirmDelete" :disabled="store.deletingImages"
+                            class="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/30 transition-all flex items-center justify-center gap-2">
+                            <i v-if="store.deletingImages" class="ph ph-spinner animate-spin"></i>
+                            <span>{{ store.deletingImages ? '删除中...' : '确认删除' }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

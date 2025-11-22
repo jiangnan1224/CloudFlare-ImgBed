@@ -19,9 +19,13 @@ export const store = reactive({
     totalImages: 0,
     toasts: [],
     selectedImages: [],
+    // Modals
     showMoveModal: false,
     moveTargetDir: '/',
     movingImages: false,
+    showDeleteModal: false,
+    deleteTarget: null, // can be single image object or 'selected' string
+    deletingImages: false,
     isMobileMenuOpen: false,
 
     // Image Preview State

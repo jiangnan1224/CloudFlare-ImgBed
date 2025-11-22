@@ -40,10 +40,20 @@ export const formatSize = (img) => {
     return sizeInMB + 'MB';
 };
 
-export const copyLink = async (name, showToast) => {
+export const getLink = (name, type) => {
     const url = `${window.location.origin}/file/${name}`;
+    switch (type) {
+        case 'markdown': return `![${name}](${url})`;
+        case 'html': return `<img src="${url}" alt="${name}" />`;
+        case 'bbcode': return `[img]${url}[/img]`;
+        default: return url;
+    }
+};
+
+export const copyLink = async (name, showToast, type = 'url') => {
+    const text = getLink(name, type);
     try {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(text);
         showToast('链接已复制到剪贴板');
     } catch (e) {
         showToast('复制链接失败', 'error');
