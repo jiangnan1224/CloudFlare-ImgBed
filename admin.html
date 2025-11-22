@@ -434,18 +434,27 @@
                         </div>
 
                         <!-- Pagination -->
-                        <div v-if="images.length > 0" class="flex items-center justify-center gap-4 mt-8 pb-8">
-                            <button @click="loadPage(currentPage - 1)" :disabled="currentPage === 1"
-                                class="px-5 py-2.5 rounded-xl glass-panel hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all shadow-sm hover:shadow-md font-medium text-gray-700">
-                                <i class="ph ph-caret-left font-bold"></i> Previous
-                            </button>
-                            <span
-                                class="text-gray-600 font-semibold bg-white/50 px-4 py-2 rounded-lg border border-white/50">Page
-                                {{ currentPage }}</span>
-                            <button @click="loadPage(currentPage + 1)" :disabled="images.length < pageSize"
-                                class="px-5 py-2.5 rounded-xl glass-panel hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all shadow-sm hover:shadow-md font-medium text-gray-700">
-                                Next <i class="ph ph-caret-right font-bold"></i>
-                            </button>
+                        <div v-if="images.length > 0"
+                            class="flex flex-col md:flex-row items-center justify-center gap-4 mt-8 pb-8">
+                            <div class="flex items-center gap-4">
+                                <button @click="loadPage(currentPage - 1)" :disabled="currentPage === 1"
+                                    class="px-5 py-2.5 rounded-xl glass-panel hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all shadow-sm hover:shadow-md font-medium text-gray-700">
+                                    <i class="ph ph-caret-left font-bold"></i> Previous
+                                </button>
+                                <span
+                                    class="text-gray-600 font-semibold bg-white/50 px-4 py-2 rounded-lg border border-white/50 whitespace-nowrap">
+                                    Page {{ currentPage }} <span v-if="totalImages">/ {{ Math.ceil(totalImages /
+                                        pageSize) }}</span>
+                                </span>
+                                <button @click="loadPage(currentPage + 1)" :disabled="images.length < pageSize"
+                                    class="px-5 py-2.5 rounded-xl glass-panel hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all shadow-sm hover:shadow-md font-medium text-gray-700">
+                                    Next <i class="ph ph-caret-right font-bold"></i>
+                                </button>
+                            </div>
+                            <div v-if="totalImages"
+                                class="text-sm text-gray-500 font-medium bg-white/30 px-3 py-1 rounded-full">
+                                共 {{ totalImages }} 张图片
+                            </div>
                         </div>
                     </div>
 
@@ -886,7 +895,8 @@
                 const searchQuery = ref('');
                 const loadingImages = ref(false);
                 const currentPage = ref(1);
-                const pageSize = ref(50);
+                const pageSize = ref(20);
+                const totalImages = ref(0);
                 const toasts = ref([]);
                 const selectedImages = ref([]);
                 const showMoveModal = ref(false);
@@ -1074,6 +1084,7 @@
                         if (data.files) {
                             images.value = data.files;
                             if (data.directories) directories.value = data.directories;
+                            if (data.total !== undefined) totalImages.value = data.total; // Get total from response
                             selectedImages.value = []; // Clear selection on load
                             console.log(`Loaded ${data.files.length} images`);
                         }
