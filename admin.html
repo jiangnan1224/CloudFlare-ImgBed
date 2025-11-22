@@ -952,12 +952,14 @@
                         item.isOpen = !item.isOpen;
                     } else {
                         currentView.value = item.id;
+                        isMobileMenuOpen.value = false; // Close mobile menu
                     }
                 };
 
                 const handleSubMenuClick = (parent, child) => {
                     currentView.value = parent.id;
                     currentSettingsTab.value = child.id;
+                    isMobileMenuOpen.value = false; // Close mobile menu
                 };
 
                 const currentViewLabel = computed(() => {
@@ -978,6 +980,11 @@
                     setTimeout(() => {
                         toasts.value = toasts.value.filter(t => t.id !== id);
                     }, 3000);
+                };
+
+                const getAuthHeaders = () => {
+                    const credentials = localStorage.getItem('adminCredentials');
+                    return credentials ? { 'Authorization': `Basic ${credentials}` } : {};
                 };
 
                 const handleLogin = async () => {
@@ -1056,7 +1063,9 @@
                         });
 
                         const res = await Promise.race([
-                            fetch(`/api/manage/list?${params}`),
+                            fetch(`/api/manage/list?${params}`, {
+                                headers: getAuthHeaders()
+                            }),
                             timeout
                         ]);
 
@@ -1240,11 +1249,12 @@
                 const fetchAllSettings = async () => {
                     loadingSettings.value = true;
                     try {
+                        const headers = getAuthHeaders();
                         const [sec, up, pg, oth] = await Promise.all([
-                            fetch('/api/manage/sysConfig/security').then(r => r.json()),
-                            fetch('/api/manage/sysConfig/upload').then(r => r.json()),
-                            fetch('/api/manage/sysConfig/page').then(r => r.json()),
-                            fetch('/api/manage/sysConfig/others').then(r => r.json())
+                            fetch('/api/manage/sysConfig/security', { headers }).then(r => r.json()),
+                            fetch('/api/manage/sysConfig/upload', { headers }).then(r => r.json()),
+                            fetch('/api/manage/sysConfig/page', { headers }).then(r => r.json()),
+                            fetch('/api/manage/sysConfig/others', { headers }).then(r => r.json())
                         ]);
 
                         settings.value.security = sec;
@@ -1262,11 +1272,12 @@
                 const saveSettings = async () => {
                     savingSettings.value = true;
                     try {
+                        const headers = getAuthHeaders();
                         await Promise.all([
-                            fetch('/api/manage/sysConfig/security', { method: 'POST', body: JSON.stringify(settings.value.security) }),
-                            fetch('/api/manage/sysConfig/upload', { method: 'POST', body: JSON.stringify(settings.value.upload) }),
-                            fetch('/api/manage/sysConfig/page', { method: 'POST', body: JSON.stringify(settings.value.page) }),
-                            fetch('/api/manage/sysConfig/others', { method: 'POST', body: JSON.stringify(settings.value.others) })
+                            fetch('/api/manage/sysConfig/security', { method: 'POST', headers, body: JSON.stringify(settings.value.security) }),
+                            fetch('/api/manage/sysConfig/upload', { method: 'POST', headers, body: JSON.stringify(settings.value.upload) }),
+                            fetch('/api/manage/sysConfig/page', { method: 'POST', headers, body: JSON.stringify(settings.value.page) }),
+                            fetch('/api/manage/sysConfig/others', { method: 'POST', headers, body: JSON.stringify(settings.value.others) })
                         ]);
 
                         showToast('设置保存成功');
