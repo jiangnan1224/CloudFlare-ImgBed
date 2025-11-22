@@ -203,21 +203,21 @@
                 </header>
 
                 <!-- Toolbar Container -->
-                <div v-if="currentView === 'images'" class="px-8 pt-6 pb-2 z-20">
-                    <div class="glass-panel p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between z-10 shadow-sm transition-all duration-300"
+                <div v-if="currentView === 'images'" class="px-6 pt-4 pb-2 z-20">
+                    <div class="glass-panel px-4 py-3 rounded-2xl flex flex-wrap gap-4 items-center justify-between z-10 shadow-sm transition-all duration-300"
                         :class="selectedImages.length > 0 ? 'bg-blue-50/90 border-blue-200' : ''">
 
                         <!-- Bulk Actions Mode -->
                         <div v-if="selectedImages.length > 0"
-                            class="flex items-center gap-4 flex-1 w-full animate-fade-in">
+                            class="flex items-center gap-4 flex-1 w-full animate-fade-in h-[42px]">
                             <div class="flex items-center gap-3">
                                 <button @click="selectedImages = []"
-                                    class="p-2 hover:bg-white/50 rounded-lg text-gray-500 transition-colors">
+                                    class="p-1.5 hover:bg-white/50 rounded-lg text-gray-500 transition-colors">
                                     <i class="ph ph-x text-lg"></i>
                                 </button>
-                                <span class="font-bold text-blue-600">{{ selectedImages.length }} 已选择</span>
+                                <span class="font-bold text-blue-600 text-sm">{{ selectedImages.length }} 已选择</span>
                             </div>
-                            <div class="h-6 w-px bg-blue-200 mx-2"></div>
+                            <div class="h-5 w-px bg-blue-200 mx-2"></div>
                             <div class="flex items-center gap-2">
                                 <button @click="selectAll"
                                     class="px-3 py-1.5 bg-white/60 hover:bg-white text-blue-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
@@ -229,49 +229,49 @@
                             <div class="flex-1"></div>
                             <div class="flex items-center gap-2">
                                 <button @click="showMoveModal = true"
-                                    class="px-4 py-2 bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-medium shadow-sm transition-all flex items-center gap-2">
+                                    class="px-3 py-1.5 bg-white text-blue-600 hover:bg-blue-50 rounded-lg font-medium shadow-sm transition-all flex items-center gap-2 text-sm">
                                     <i class="ph ph-folder-notch-plus text-lg"></i> 移动
                                 </button>
                                 <button @click="downloadSelected"
-                                    class="px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 rounded-xl font-medium shadow-sm transition-all flex items-center gap-2">
+                                    class="px-3 py-1.5 bg-white text-gray-700 hover:bg-gray-50 rounded-lg font-medium shadow-sm transition-all flex items-center gap-2 text-sm">
                                     <i class="ph ph-download-simple text-lg"></i> 下载
                                 </button>
                                 <button @click="deleteSelected"
-                                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-500/30 transition-all flex items-center gap-2">
+                                    class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium shadow-lg shadow-red-500/30 transition-all flex items-center gap-2 text-sm">
                                     <i class="ph ph-trash text-lg"></i> 删除
                                 </button>
                             </div>
                         </div>
 
                         <!-- Search Mode -->
-                        <div v-else class="flex items-center gap-4 flex-1 min-w-[200px] animate-fade-in">
+                        <div v-else class="flex items-center gap-3 flex-1 min-w-[200px] animate-fade-in h-[42px]">
                             <div class="relative flex-1 max-w-md group">
                                 <input v-model="searchQuery" @keyup.enter="fetchImages(true)" type="text"
                                     placeholder="搜索文件..."
-                                    class="w-full pl-11 pr-4 py-2.5 rounded-xl bg-white/60 border border-gray-200/60 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+                                    class="w-full pl-10 pr-4 py-2 rounded-xl bg-white/60 border border-gray-200/60 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-sm">
                                 <i
-                                    class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors text-lg"></i>
+                                    class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors text-lg"></i>
                             </div>
                             <select v-model="currentDir" @change="fetchImages(true)"
-                                class="px-4 py-2.5 rounded-xl border border-gray-200/60 bg-white/60 focus:bg-white focus:border-blue-500 outline-none cursor-pointer hover:bg-white transition-colors">
+                                class="px-3 py-2 rounded-xl border border-gray-200/60 bg-white/60 focus:bg-white focus:border-blue-500 outline-none cursor-pointer hover:bg-white transition-colors text-sm max-w-[150px] truncate">
                                 <option value="/">根目录 /</option>
                                 <option v-for="dir in directories" :key="dir" :value="dir">{{ dir }}</option>
                             </select>
                             <div
-                                class="flex items-center gap-2 bg-gray-100/50 p-1 rounded-xl border border-gray-200/30 ml-auto">
+                                class="flex items-center gap-1 bg-gray-100/50 p-1 rounded-xl border border-gray-200/30 ml-auto">
                                 <button @click="fetchImages(true)"
-                                    class="p-2 text-gray-600 hover:bg-white hover:text-primary rounded-lg transition-all shadow-sm hover:shadow"
+                                    class="p-1.5 text-gray-600 hover:bg-white hover:text-primary rounded-lg transition-all shadow-sm hover:shadow"
                                     title="Refresh">
-                                    <i class="ph ph-arrows-clockwise text-xl"></i>
+                                    <i class="ph ph-arrows-clockwise text-lg"></i>
                                 </button>
-                                <div class="h-5 w-px bg-gray-300/50 mx-1"></div>
-                                <button @click="viewMode = 'grid'" class="p-2 rounded-lg transition-all"
+                                <div class="h-4 w-px bg-gray-300/50 mx-1"></div>
+                                <button @click="viewMode = 'grid'" class="p-1.5 rounded-lg transition-all"
                                     :class="viewMode === 'grid' ? 'bg-white text-primary shadow-sm' : 'text-gray-600 hover:bg-white/50'">
-                                    <i class="ph ph-squares-four text-xl"></i>
+                                    <i class="ph ph-squares-four text-lg"></i>
                                 </button>
-                                <button @click="viewMode = 'list'" class="p-2 rounded-lg transition-all"
+                                <button @click="viewMode = 'list'" class="p-1.5 rounded-lg transition-all"
                                     :class="viewMode === 'list' ? 'bg-white text-primary shadow-sm' : 'text-gray-600 hover:bg-white/50'">
-                                    <i class="ph ph-list-dashes text-xl"></i>
+                                    <i class="ph ph-list-dashes text-lg"></i>
                                 </button>
                             </div>
                         </div>
@@ -279,7 +279,7 @@
                 </div>
 
                 <!-- Views -->
-                <div class="flex-1 overflow-auto px-8 pb-8 pt-2 scroll-smooth">
+                <div class="flex-1 overflow-auto px-6 pb-6 pt-2 scroll-smooth">
 
                     <!-- Image Manager View -->
                     <div v-if="currentView === 'images'" class="space-y-6 max-w-7xl mx-auto">
@@ -537,7 +537,7 @@
                                                 </h3>
                                                 <button @click="addChannel('telegram')"
                                                     class="text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors">
-                                                    <i class="ph ph-plus-circle"></i> Add Channel
+                                                    <i class="ph ph-plus-circle"></i> 添加频道
                                                 </button>
                                             </div>
                                             <div class="space-y-4">
@@ -568,7 +568,7 @@
                                                     <div class="mt-4 flex items-center gap-2">
                                                         <input v-model="channel.enabled" type="checkbox"
                                                             class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
-                                                        <span class="text-sm font-medium text-gray-700">Enabled</span>
+                                                        <span class="text-sm font-medium text-gray-700">启用</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -584,7 +584,7 @@
                                                 </h3>
                                                 <button @click="addChannel('cfr2')"
                                                     class="text-sm bg-orange-50 text-orange-600 hover:bg-orange-100 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors">
-                                                    <i class="ph ph-plus-circle"></i> Add Channel
+                                                    <i class="ph ph-plus-circle"></i> 添加频道
                                                 </button>
                                             </div>
                                             <div class="space-y-4">
@@ -604,7 +604,7 @@
                                                     <div class="mt-4 flex items-center gap-2">
                                                         <input v-model="channel.enabled" type="checkbox"
                                                             class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500">
-                                                        <span class="text-sm font-medium text-gray-700">Enabled</span>
+                                                        <span class="text-sm font-medium text-gray-700">启用</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -620,7 +620,7 @@
                                                 </h3>
                                                 <button @click="addChannel('s3')"
                                                     class="text-sm bg-green-50 text-green-600 hover:bg-green-100 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors">
-                                                    <i class="ph ph-plus-circle"></i> Add Channel
+                                                    <i class="ph ph-plus-circle"></i> 添加频道
                                                 </button>
                                             </div>
                                             <div class="space-y-4">
@@ -706,7 +706,7 @@
                                                 class="flex items-center gap-2 mt-2">
                                                 <input v-model="item.value" type="checkbox"
                                                     class="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary">
-                                                <span class="text-sm font-medium text-gray-700">Enabled</span>
+                                                <span class="text-sm font-medium text-gray-700">启用</span>
                                             </div>
 
                                             <p v-if="item.tooltip"
@@ -718,28 +718,26 @@
                                     <!-- Others Settings -->
                                     <div v-if="currentSettingsTab === 'others'" class="space-y-6">
                                         <section class="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
-                                            <h3 class="text-base font-bold text-gray-900 mb-4">Telemetry</h3>
+                                            <h3 class="text-base font-bold text-gray-900 mb-4">遥测</h3>
                                             <div class="flex items-center gap-3">
                                                 <input v-model="settings.others.telemetry.enabled" type="checkbox"
                                                     class="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary">
-                                                <label class="text-sm font-medium text-gray-700">Enable
-                                                    Telemetry</label>
+                                                <label class="text-sm font-medium text-gray-700">启用遥测</label>
                                             </div>
                                         </section>
 
                                         <section class="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
-                                            <h3 class="text-base font-bold text-gray-900 mb-4">Random Image API</h3>
+                                            <h3 class="text-base font-bold text-gray-900 mb-4">随机图片 API</h3>
                                             <div class="space-y-4">
                                                 <div class="flex items-center gap-3">
                                                     <input v-model="settings.others.randomImageAPI.enabled"
                                                         type="checkbox"
                                                         class="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary">
-                                                    <label class="text-sm font-medium text-gray-700">Enable API</label>
+                                                    <label class="text-sm font-medium text-gray-700">启用 API</label>
                                                 </div>
                                                 <div>
                                                     <label
-                                                        class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Allowed
-                                                        Directory</label>
+                                                        class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">允许的目录</label>
                                                     <input v-model="settings.others.randomImageAPI.allowedDir"
                                                         type="text"
                                                         class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
@@ -753,19 +751,18 @@
                                                 <div class="flex items-center gap-3">
                                                     <input v-model="settings.others.webDAV.enabled" type="checkbox"
                                                         class="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary">
-                                                    <label class="text-sm font-medium text-gray-700">Enable
-                                                        WebDAV</label>
+                                                    <label class="text-sm font-medium text-gray-700">启用 WebDAV</label>
                                                 </div>
                                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                                     <div>
                                                         <label
-                                                            class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Username</label>
+                                                            class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">用户名</label>
                                                         <input v-model="settings.others.webDAV.username" type="text"
                                                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
                                                     </div>
                                                     <div>
                                                         <label
-                                                            class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Password</label>
+                                                            class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">密码</label>
                                                         <input v-model="settings.others.webDAV.password" type="password"
                                                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
                                                     </div>

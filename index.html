@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sanyue ImgHub</title>
-    <meta name="description" content="Simple, fast, and secure image hosting.">
+    <meta name="description" content="简单、快速、安全的图片托管服务。">
     <link rel="icon" href="/logo.png">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -95,8 +95,36 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="flex-1 pt-24 pb-12 px-6">
-            <div class="max-w-4xl mx-auto space-y-12">
+        <main class="flex-1 pt-24 pb-12 px-6 relative">
+            <!-- Login Overlay -->
+            <div v-if="authRequired && !isAuthenticated"
+                class="absolute inset-0 z-40 bg-white/80 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
+                <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-gray-100 text-center">
+                    <div
+                        class="w-16 h-16 bg-blue-50 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <i class="ph ph-lock-key text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">需要身份验证</h2>
+                    <p class="text-gray-500 mb-8">请输入访问代码以上传图片。</p>
+
+                    <form @submit.prevent="handleLogin" class="space-y-4">
+                        <div class="relative">
+                            <input type="password" v-model="authCodeInput"
+                                class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-center tracking-widest text-lg"
+                                placeholder="输入访问代码" required>
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-primary hover:bg-blue-600 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transform active:scale-[0.98]">
+                            <span>访问上传</span>
+                            <i class="ph ph-arrow-right font-bold"></i>
+                        </button>
+                        <p v-if="authError" class="text-red-500 text-sm font-medium animate-pulse">{{ authError }}</p>
+                    </form>
+                </div>
+            </div>
+
+            <div class="max-w-4xl mx-auto space-y-12"
+                :class="{'filter blur-sm pointer-events-none': authRequired && !isAuthenticated}">
 
                 <!-- Hero Section -->
                 <div class="text-center space-y-4">
@@ -104,8 +132,7 @@
                         Upload simply. <span class="text-primary">Share instantly.</span>
                     </h1>
                     <p class="text-lg text-gray-500 max-w-2xl mx-auto">
-                        Drag and drop your images here, or paste from clipboard. Fast, secure, and reliable hosting for
-                        your visual content.
+                        拖放您的图片到这里，或从剪贴板粘贴。快速、安全、可靠的图片托管服务。
                     </p>
                 </div>
 
@@ -136,19 +163,19 @@
                                 :class="uploads.length > 0 ? 'space-y-1' : ''">
                                 <h3 class="font-semibold text-gray-900 transition-all duration-500"
                                     :class="uploads.length > 0 ? 'text-lg' : 'text-xl'">
-                                    {{ uploads.length > 0 ? 'Add more images' : 'Drop your images here' }}
+                                    {{ uploads.length > 0 ? '添加更多图片' : '将图片拖放到这里' }}
                                 </h3>
                                 <p class="text-gray-500 transition-all duration-500"
                                     :class="uploads.length > 0 ? 'text-sm' : ''">
-                                    {{ uploads.length > 0 ? 'or click to browse' : 'or click to browse' }}
+                                    {{ uploads.length > 0 ? '或点击浏览' : '或点击浏览' }}
                                 </p>
                             </div>
 
                             <div v-if="uploads.length === 0"
                                 class="flex items-center justify-center gap-4 text-sm text-gray-400 animate-fade-in">
-                                <span class="flex items-center gap-1"><i class="ph ph-image"></i> PNG, JPG, GIF,
-                                    WEBP</span>
-                                <span class="flex items-center gap-1"><i class="ph ph-file-size"></i> Max 20MB</span>
+                                <span class="flex items-center gap-1"><i class="ph ph-image"></i>
+                                    PNG、JPG、GIF、WEBP</span>
+                                <span class="flex items-center gap-1"><i class="ph ph-file-size"></i> 最大 20MB</span>
                             </div>
                         </div>
                     </div>
@@ -194,13 +221,14 @@
                             <div v-if="file.status === 'uploading'"
                                 class="w-full bg-gray-100 rounded-full h-1.5 mt-4 overflow-hidden">
                                 <div class="bg-primary h-full rounded-full transition-all duration-300"
-                                    style="width: 100%" :class="{'animate-pulse': true}"></div>
+                                    :style="{ width: file.progress + '%' }"
+                                    :class="{'animate-pulse': file.progress === 100}"></div>
                             </div>
 
                             <!-- Error Message -->
                             <div v-else-if="file.status === 'error'"
                                 class="text-sm text-red-500 mt-2 flex items-center gap-1">
-                                <i class="ph ph-warning"></i> {{ file.error || 'Upload failed' }}
+                                <i class="ph ph-warning"></i> {{ file.error || '上传失败' }}
                             </div>
 
                             <!-- Success Actions -->
@@ -247,7 +275,7 @@
     </div>
 
     <script>
-        const { createApp, ref, onMounted, onUnmounted } = Vue;
+        const { createApp, ref, reactive, onMounted, onUnmounted } = Vue;
 
         createApp({
             setup() {
@@ -256,20 +284,59 @@
                 const uploads = ref([]);
                 const toasts = ref([]);
 
+                // Auth State
+                const authRequired = ref(false);
+                const isAuthenticated = ref(false);
+                const authCodeInput = ref('');
+                const authError = ref('');
+                const authCode = ref('');
+
                 // Paste Event Listener
                 const handleGlobalPaste = (e) => {
+                    if (authRequired.value && !isAuthenticated.value) return;
                     handlePaste(e);
                 };
 
-                onMounted(() => {
+                onMounted(async () => {
                     window.addEventListener('paste', handleGlobalPaste);
+
+                    // Check Auth Config
+                    try {
+                        const res = await fetch('/api/userConfig');
+                        const config = await res.json();
+                        authRequired.value = config.authRequired;
+
+                        if (authRequired.value) {
+                            const savedCode = localStorage.getItem('authCode');
+                            if (savedCode) {
+                                authCode.value = savedCode;
+                                isAuthenticated.value = true;
+                            }
+                        } else {
+                            isAuthenticated.value = true;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load config:', e);
+                    }
                 });
 
                 onUnmounted(() => {
                     window.removeEventListener('paste', handleGlobalPaste);
                 });
 
+                const handleLogin = () => {
+                    if (authCodeInput.value) {
+                        authCode.value = authCodeInput.value;
+                        localStorage.setItem('authCode', authCode.value);
+                        isAuthenticated.value = true;
+                        authError.value = '';
+                    } else {
+                        authError.value = '请输入有效的代码';
+                    }
+                };
+
                 const triggerFileInput = () => {
+                    if (authRequired.value && !isAuthenticated.value) return;
                     fileInput.value.click();
                 };
 
@@ -280,6 +347,7 @@
                 };
 
                 const handleDrop = (e) => {
+                    if (authRequired.value && !isAuthenticated.value) return;
                     isDragging.value = false;
                     const files = Array.from(e.dataTransfer.files);
                     processFiles(files);
@@ -301,11 +369,11 @@
                 const processFiles = (files) => {
                     files.forEach(file => {
                         if (!file.type.startsWith('image/')) {
-                            showToast(`Skipped ${file.name}: Not an image`, 'error');
+                            showToast(`已跳过 ${file.name}：不是图片文件`, 'error');
                             return;
                         }
 
-                        const uploadItem = {
+                        const uploadItem = reactive({
                             id: Date.now() + Math.random(),
                             name: file.name,
                             size: file.size,
@@ -316,52 +384,78 @@
                             result: null,
                             error: null,
                             copied: null
-                        };
+                        });
 
                         uploads.value.unshift(uploadItem);
                         uploadFile(uploadItem);
                     });
                 };
 
-                const uploadFile = async (item) => {
+                const uploadFile = (item) => {
                     const formData = new FormData();
                     formData.append('file', item.file);
 
-                    try {
-                        const res = await fetch('/upload', {
-                            method: 'POST',
-                            body: formData
-                        });
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/upload', true);
 
-                        const data = await res.json();
-
-                        if (res.ok) {
-                            // The API returns an array of objects with 'src'
-                            if (Array.isArray(data) && data.length > 0) {
-                                item.result = data[0].src;
-                                // Update preview to show uploaded image
-                                const uploadedUrl = data[0].src.startsWith('http') ? data[0].src : window.location.origin + data[0].src;
-
-                                // Revoke the old blob URL to free memory
-                                if (item.preview && item.preview.startsWith('blob:')) {
-                                    URL.revokeObjectURL(item.preview);
-                                }
-
-                                item.preview = uploadedUrl;
-                                item.progress = 100;
-                                item.status = 'success';
-                            } else {
-                                throw new Error('Invalid response format');
-                            }
-                            showToast('Upload successful');
-                        } else {
-                            throw new Error(data.error || 'Upload failed');
-                        }
-                    } catch (e) {
-                        item.status = 'error';
-                        item.error = e.message;
-                        showToast(`Upload failed: ${e.message}`, 'error');
+                    if (authRequired.value && authCode.value) {
+                        xhr.setRequestHeader('authCode', authCode.value);
                     }
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            item.progress = Math.round((e.loaded / e.total) * 100);
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                if (Array.isArray(data) && data.length > 0) {
+                                    item.result = data[0].src;
+                                    const uploadedUrl = data[0].src.startsWith('http') ? data[0].src : window.location.origin + data[0].src;
+
+                                    if (item.preview && item.preview.startsWith('blob:')) {
+                                        URL.revokeObjectURL(item.preview);
+                                    }
+
+                                    item.preview = uploadedUrl;
+                                    item.progress = 100;
+                                    item.status = 'success';
+                                    showToast('上传成功');
+                                } else {
+                                    throw new Error('无效的响应格式');
+                                }
+                            } catch (e) {
+                                item.status = 'error';
+                                item.error = '无效的响应';
+                                showToast('上传失败：无效的响应', 'error');
+                            }
+                        } else {
+                            if (xhr.status === 401) {
+                                isAuthenticated.value = false;
+                                authError.value = '会话已过期或代码无效';
+                                localStorage.removeItem('authCode');
+                            }
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                item.error = data.error || '上传失败';
+                            } catch (e) {
+                                item.error = '上传失败';
+                            }
+                            item.status = 'error';
+                            showToast(`上传失败：${item.error}`, 'error');
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        item.status = 'error';
+                        item.error = '网络错误';
+                        showToast('上传失败：网络错误', 'error');
+                    };
+
+                    xhr.send(formData);
                 };
 
                 const removeFile = (id) => {
@@ -386,9 +480,9 @@
                         await navigator.clipboard.writeText(text);
                         item.copied = type;
                         setTimeout(() => item.copied = null, 2000);
-                        showToast('Link copied to clipboard');
+                        showToast('链接已复制到剪贴板');
                     } catch (e) {
-                        showToast('Failed to copy link', 'error');
+                        showToast('复制链接失败', 'error');
                     }
                 };
 
@@ -420,7 +514,13 @@
                     removeFile,
                     getLink,
                     copyLink,
-                    formatSize
+                    formatSize,
+                    // Auth
+                    authRequired,
+                    isAuthenticated,
+                    authCodeInput,
+                    authError,
+                    handleLogin
                 };
             }
         }).mount('#app');
